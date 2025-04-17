@@ -14,22 +14,16 @@ This FastAPI application allows users to upload brain MRI images to detect the p
 1. **Install dependencies**:
 
    ```bash
-   pip install fastapi uvicorn tensorflow pillow opencv-python
+   pip install -r requirements.txt
    ```
 
-2. **Place your trained model** file in the project directory:
-
-   ```
-   tumor_classifier_model.h5
-   ```
-
-3. **Start the server**:
+2. **Start the server**:
 
    ```bash
    uvicorn main:app --reload
    ```
 
-4. **Open the interactive docs**:
+3. **Open the interactive docs**:
 
    ```
    http://127.0.0.1:8000/docs

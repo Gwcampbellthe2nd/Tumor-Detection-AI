@@ -77,6 +77,10 @@ def create_heatmap_overlay(heatmap, original_img):
     jet_rgb = cv2.cvtColor(jet, cv2.COLOR_BGR2RGB)
     return cv2.addWeighted(original_img, 0.5, jet_rgb, 0.5, 0)
 
+@app.get("/")
+async def health_check():
+    return {"status": "running"}
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     if not file.content_type.startswith('image/'):

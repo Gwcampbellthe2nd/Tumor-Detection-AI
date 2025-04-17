@@ -6,15 +6,28 @@ from PIL import Image
 import cv2
 import io
 import base64
+import os
 from contextlib import asynccontextmanager
+from google.cloud import storage
 
 model = None
 class_names = ['glioma', 'meningioma', 'notumor', 'pituitary']
 
+def download_model(bucket_path, local_path="model.h5"):
+    if not os.path.exists(local_path):
+        client = storage.Client()
+        bucket_name, blob_path = bucket_path[5:].split('/', 1)  # remove 'gs://'
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(blob_path)
+        blob.download_to_filename(local_path)
+    return local_path
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model
-    model = tf.keras.models.load_model('tumor_classifier_model.h5')
+    model_path = os.getenv("MODEL_PATH", "tumor_classifier_model.h5")
+    local_model_path = download_model(model_path)
+    model = tf.keras.models.load_model(local_model_path)
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -78,7 +91,7 @@ def create_heatmap_overlay(heatmap, original_img):
     return cv2.addWeighted(original_img, 0.5, jet_rgb, 0.5, 0)
 
 @app.get("/")
-async def health_check():
+async def root():
     return {"status": "running"}
 
 @app.post("/predict")

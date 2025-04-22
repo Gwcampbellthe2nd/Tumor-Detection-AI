@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import tensorflow as tf
 from PIL import Image
@@ -49,6 +50,19 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+# CORS setup for specific domains only
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://campbellcodes.com",
+        "https://www.campbellcodes.com",
+        "https://tumors.campbellcodes.com"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def preprocess_image(image_bytes):
     try:

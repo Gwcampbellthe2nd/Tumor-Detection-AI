@@ -12,12 +12,15 @@ RUN apt-get update && apt-get install -y \
     libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of your code
+# Copy your application code
 COPY . .
 
-# Expose port and run app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Set default PORT (Cloud Run overrides this with env variable)
+ENV PORT=8080
+
+# Start the FastAPI app with uvicorn
+CMD exec uvicorn main:app --host 0.0.0.0 --port $PORT

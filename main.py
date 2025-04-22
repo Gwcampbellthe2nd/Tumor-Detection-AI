@@ -9,25 +9,43 @@ import base64
 import os
 from contextlib import asynccontextmanager
 from google.cloud import storage
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 model = None
 class_names = ['glioma', 'meningioma', 'notumor', 'pituitary']
 
 def download_model(bucket_path, local_path="model.h5"):
-    if not os.path.exists(local_path):
-        client = storage.Client()
-        bucket_name, blob_path = bucket_path[5:].split('/', 1)  # remove 'gs://'
-        bucket = client.bucket(bucket_name)
-        blob = bucket.blob(blob_path)
-        blob.download_to_filename(local_path)
-    return local_path
+    try:
+        if not os.path.exists(local_path):
+            logger.info(f"Downloading model from {bucket_path} to {local_path}")
+            client = storage.Client()
+            bucket_name, blob_path = bucket_path[5:].split('/', 1)  # strip 'gs://'
+            bucket = client.bucket(bucket_name)
+            blob = bucket.blob(blob_path)
+            blob.download_to_filename(local_path)
+        else:
+            logger.info("Model already exists locally, skipping download.")
+        return local_path
+    except Exception as e:
+        logger.error(f"Failed to download model from GCS: {str(e)}")
+        raise RuntimeError(f"Model download failed: {str(e)}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model
     model_path = os.getenv("MODEL_PATH", "tumor_classifier_model.h5")
-    local_model_path = download_model(model_path)
-    model = tf.keras.models.load_model(local_model_path)
+    try:
+        local_model_path = download_model(model_path)
+        logger.info("Loading model...")
+        model = tf.keras.models.load_model(local_model_path)
+        logger.info("Model loaded successfully.")
+    except Exception as e:
+        logger.error(f"Failed to load model: {str(e)}")
+        raise RuntimeError(f"Startup failed: {str(e)}")
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -124,4 +142,5 @@ async def predict(file: UploadFile = File(...)):
         })
 
     except Exception as e:
+        logger.exception("Prediction failed")
         raise HTTPException(500, f"Prediction failed: {str(e)}")
